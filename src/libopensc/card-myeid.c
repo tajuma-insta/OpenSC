@@ -674,6 +674,7 @@ static int myeid_set_security_env_ec(sc_card_t *card, const sc_security_env_t *e
 		sc_log(card->ctx, "Decipher operation is not supported with EC keys.");
 		return SC_ERROR_NOT_SUPPORTED;
 		break;
+	case SC_SEC_OPERATION_DERIVE:
 	case SC_SEC_OPERATION_SIGN:
 		apdu.p1 = 0x41;
 		apdu.p2 = 0xB6;
@@ -928,12 +929,13 @@ int myeid_ecdh_derive(struct sc_card *card, const u8* pubkey, size_t pubkey_len,
 
 	/* Fill in "Data objects in dynamic authentication template (tag 0x7C) structure */
 	sbuf[0] = 0x7C;
-	sbuf[1] = pubkey_len + 4;
+	sbuf[1] = pubkey_len + 2;
 	sbuf[2] = 0x85;
 	sbuf[3] = pubkey_len;
 	memcpy(&sbuf[4], pubkey, pubkey_len);
 
 	apdu.lc = pubkey_len + 4;
+	apdu.le = 0;
 	apdu.datalen = apdu.lc;
 	apdu.data = sbuf;
 
