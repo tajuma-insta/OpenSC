@@ -134,7 +134,7 @@ static int myeid_init(struct sc_card *card)
 	u8 defatr[SC_MAX_ATR_SIZE];
 	size_t len = sizeof(defatr);
 	const char *atrp = myeid_atrs[MYEID_INFINEON_CHIP_ATR];
-
+	
 	LOG_FUNC_CALLED(card->ctx);
 
 	card->name = myeid_card_name;
@@ -193,7 +193,7 @@ static int myeid_init(struct sc_card *card)
 	card->caps |= SC_CARD_CAP_RNG | SC_CARD_CAP_ISO7816_PIN_INFO;
 
 	card->max_recv_size = 255;
-	card->max_send_size = 255;
+	card->max_send_size = 255;	
 
 	LOG_FUNC_RETURN(card->ctx, SC_SUCCESS);
 }
@@ -674,10 +674,13 @@ static int myeid_set_security_env_ec(sc_card_t *card, const sc_security_env_t *e
 		sc_log(card->ctx, "Decipher operation is not supported with EC keys.");
 		return SC_ERROR_NOT_SUPPORTED;
 		break;
-	case SC_SEC_OPERATION_DERIVE:
-	case SC_SEC_OPERATION_SIGN:
+	case SC_SEC_OPERATION_SIGN:	
 		apdu.p1 = 0x41;
-		apdu.p2 = 0xB6;
+		apdu.p2 = 0xB6;		
+		break;	
+	case SC_SEC_OPERATION_DERIVE:
+		apdu.p1 = 0x41;
+		apdu.p2 = 0xA4;
 		break;
 	default:
 		return SC_ERROR_INVALID_ARGUMENTS;
@@ -918,23 +921,43 @@ int myeid_ecdh_derive(struct sc_card *card, const u8* pubkey, size_t pubkey_len,
 
 	struct sc_apdu apdu;
 	u8 sbuf[SC_MAX_APDU_BUFFER_SIZE];
-	u8 rbuf[SC_MAX_APDU_BUFFER_SIZE];
+	u8 rbuf[SC_MAX_APDU_BUFFER_SIZE];	
 
 	int r;
+	size_t ext_len_bytes;
 
 	sc_format_apdu(card, &apdu, SC_APDU_CASE_4_SHORT, 0x86, 0x00, 0x00);
 
 	apdu.resp = rbuf;
 	apdu.resplen = sizeof(rbuf);
-
-	/* Fill in "Data objects in dynamic authentication template (tag 0x7C) structure */
+	
+	/* Fill in "Data objects in dynamic authentication template" (tag 0x7C) structure 
+	*
+	*  Size of the structure depends on key length. With 521 bit keys two bytes are needed for defining length of a point.
+	*/		
+	
 	sbuf[0] = 0x7C;
-	sbuf[1] = pubkey_len + 2;
-	sbuf[2] = 0x85;
-	sbuf[3] = pubkey_len;
-	memcpy(&sbuf[4], pubkey, pubkey_len);
+	ext_len_bytes = 0;
 
-	apdu.lc = pubkey_len + 4;
+	if (pubkey_len > 127)
+	{
+		sbuf[1] = 0x81;
+		sbuf[2] = (u8) (pubkey_len + 3);
+		sbuf[3] = 0x85;
+		sbuf[4] = 0x81;
+		sbuf[5] = (u8) (pubkey_len);
+		ext_len_bytes = 2;
+	}
+	else
+	{		
+		sbuf[1] = pubkey_len + 2;
+		sbuf[2] = 0x85;
+		sbuf[3] = pubkey_len;	
+	}
+	
+	memcpy(&sbuf[4 + ext_len_bytes], pubkey, pubkey_len);
+
+	apdu.lc = pubkey_len + 4 + ext_len_bytes;
 	apdu.le = 0;
 	apdu.datalen = apdu.lc;
 	apdu.data = sbuf;
@@ -1328,8 +1351,7 @@ static int myeid_get_info(struct sc_card *card, u8 *rbuf, size_t buflen)
 	card->version.fw_major = rbuf[5] * 10 + rbuf[6];
 	card->version.fw_minor = rbuf[7];
 	/* add version to name */
-	snprintf(card_name_buf, sizeof(card_name_buf),
-			"%s %d.%d.%d", card->name, rbuf[5], rbuf[6], rbuf[7]);
+	sprintf((char *) card_name_buf, "%s %d.%d.%d", card->name, rbuf[5], rbuf[6], rbuf[7]);
 	card->name = card_name_buf;
 
 	LOG_FUNC_RETURN(card->ctx, r);
