@@ -2687,7 +2687,7 @@ derive_key(CK_SLOT_ID slot, CK_SESSION_HANDLE session, CK_OBJECT_HANDLE key)
 		buf = malloc(buf_size);	
 		
 		if (!buf)
-		    util_fatal("Failed to allocate memory for other party's public point.")
+		  util_fatal("Failed to allocate memory for other party's public point.");
 
 		bio_in = BIO_new(BIO_s_file());
 		if (BIO_read_filename(bio_in, opt_input) <= 0)
