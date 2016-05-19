@@ -134,7 +134,7 @@ static int myeid_init(struct sc_card *card)
 	u8 defatr[SC_MAX_ATR_SIZE];
 	size_t len = sizeof(defatr);
 	const char *atrp = myeid_atrs[MYEID_INFINEON_CHIP_ATR];
-
+	
 	LOG_FUNC_CALLED(card->ctx);
 
 	card->name = myeid_card_name;
@@ -193,7 +193,7 @@ static int myeid_init(struct sc_card *card)
 	card->caps |= SC_CARD_CAP_RNG | SC_CARD_CAP_ISO7816_PIN_INFO;
 
 	card->max_recv_size = 255;
-	card->max_send_size = 255;
+	card->max_send_size = 255;	
 
 	LOG_FUNC_RETURN(card->ctx, SC_SUCCESS);
 }
@@ -674,9 +674,13 @@ static int myeid_set_security_env_ec(sc_card_t *card, const sc_security_env_t *e
 		sc_log(card->ctx, "Decipher operation is not supported with EC keys.");
 		return SC_ERROR_NOT_SUPPORTED;
 		break;
-	case SC_SEC_OPERATION_SIGN:
+	case SC_SEC_OPERATION_SIGN:	
 		apdu.p1 = 0x41;
-		apdu.p2 = 0xB6;
+		apdu.p2 = 0xB6;		
+		break;	
+	case SC_SEC_OPERATION_DERIVE:
+		apdu.p1 = 0x41;
+		apdu.p2 = 0xA4;
 		break;
 	case SC_SEC_OPERATION_DERIVE:
 		apdu.p1 = 0x41;
@@ -921,7 +925,7 @@ int myeid_ecdh_derive(struct sc_card *card, const u8* pubkey, size_t pubkey_len,
 
 	struct sc_apdu apdu;
 	u8 sbuf[SC_MAX_APDU_BUFFER_SIZE];
-	u8 rbuf[SC_MAX_APDU_BUFFER_SIZE];
+	u8 rbuf[SC_MAX_APDU_BUFFER_SIZE];	
 
 	int r;
 	size_t ext_len_bytes;
@@ -1353,8 +1357,7 @@ static int myeid_get_info(struct sc_card *card, u8 *rbuf, size_t buflen)
 	card->version.fw_major = rbuf[5] * 10 + rbuf[6];
 	card->version.fw_minor = rbuf[7];
 	/* add version to name */
-	snprintf(card_name_buf, sizeof(card_name_buf),
-			"%s %d.%d.%d", card->name, rbuf[5], rbuf[6], rbuf[7]);
+	sprintf((char *) card_name_buf, "%s %d.%d.%d", card->name, rbuf[5], rbuf[6], rbuf[7]);
 	card->name = card_name_buf;
 
 	LOG_FUNC_RETURN(card->ctx, r);

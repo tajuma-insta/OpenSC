@@ -2683,6 +2683,12 @@ derive_key(CK_SLOT_ID slot, CK_SESSION_HANDLE session, CK_OBJECT_HANDLE key)
 		const EC_KEY  *eckey = NULL;
 		const EC_GROUP *ecgroup = NULL;
 		const EC_POINT * ecpoint = NULL;
+		
+		buf_size = 512; /* TODO: calculate buffer size from key length */	
+		buf = malloc(buf_size);	
+		
+		if (!buf)
+		  util_fatal("Failed to allocate memory for other party's public point.");
 
 		buf_size = 512; /* TODO: calculate buffer size from key length */	
 		buf = malloc(buf_size);
